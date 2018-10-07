@@ -11,10 +11,16 @@ import UIKit
 class TodoListViewController: UITableViewController{
     
     var itemArray = ["Apples", "Oranges", "Bananas"]
+    
+    let defaults = UserDefaults.standard
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        // Do any additional setup after loading the view, typically from a nib.
+        
+        if let item = defaults.array(forKey : "TodoListArray") as? [String] {
+            itemArray = item
+        }
+        
     }
     
     //MARK - TableView DataSource Method.
@@ -51,6 +57,7 @@ class TodoListViewController: UITableViewController{
     
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
+        // Local Variable.💪
         var textField = UITextField()
         
         let alert = UIAlertController(title: "Add New Todey Item", message: "", preferredStyle: .alert)
@@ -58,11 +65,16 @@ class TodoListViewController: UITableViewController{
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             //What will happen when user click the add item button on our UIAlert.
             self.itemArray.append(textField.text!)
+            
+            self.defaults.setValue(self.itemArray, forKey: "TodoListArray")
+            
             self.tableView.reloadData()
             }
         
         alert.addTextField { (alertTextField) in
             alertTextField.placeholder = "Create New Item"
+            
+            // Extending the scope of 'textField' using local variable tobe used in UIAlertAction.
             textField = alertTextField
         }
         
