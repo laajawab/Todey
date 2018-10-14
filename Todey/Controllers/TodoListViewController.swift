@@ -7,26 +7,23 @@
 //
 
 import UIKit
+import CoreData
 
 class TodoListViewController: UITableViewController{
     
     var itemArray = [Item]()
-    
-    let dataFielPath = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("Item.plist")
+
+    let context = (UIApplication.shared.delegate as! AppDelegate).persistentContainer.viewContext
     
 
     override func viewDidLoad() {
         super.viewDidLoad()
         
-        print(dataFielPath)
+        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
         
         
         loadItems()
-       
-        
-//        if let item = defaults.array(forKey : "TodoListArray") as? [Item] {
-//            itemArray = item
-//        }
+
         
     }
     
@@ -66,6 +63,9 @@ class TodoListViewController: UITableViewController{
     override func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         //print(itemArray[indexPath.row])
         
+        context.delete(itemArray[indexPath.row])
+        itemArray.remove(at: indexPath.row)
+        
         itemArray[indexPath.row].done = !itemArray[indexPath.row].done
         
 //        Above Single Line replace all 4lines underneath.
@@ -83,8 +83,9 @@ class TodoListViewController: UITableViewController{
         tableView.deselectRow(at: indexPath, animated: true)
     }
     
-    //MARK - Add New Items
     
+    
+    //MARK - Add New Items
     
     @IBAction func addButtonPressed(_ sender: UIBarButtonItem) {
         
@@ -96,8 +97,9 @@ class TodoListViewController: UITableViewController{
         let action = UIAlertAction(title: "Add Item", style: .default) { (action) in
             //What will happen when user click the add item button on our UIAlert.
             
-            let newItem = Item()
+            let newItem = Item(context: self.context)
             newItem.title = textField.text!
+            newItem.done = false
             
             self.itemArray.append(newItem)
             
@@ -121,34 +123,59 @@ class TodoListViewController: UITableViewController{
     //MARK - Modal Manupulation Methods.
     
     func saveItems () {
-        
-        let encoder = PropertyListEncoder()
-        
         do {
-            let data = try encoder.encode(itemArray)
-            try data.write(to: dataFielPath!)
+            try context.save()
         }
         catch {
-            print("Error encoding item array, \(error)")
+            print("Error saving context \(error)")
         }
         
         self.tableView.reloadData()
-        
-    }
-    
-    func loadItems () {
-        
-        if let data = try? Data(contentsOf: dataFielPath!) {
-            let decoder = PropertyListDecoder()
-            do {
-                itemArray = try decoder.decode([Item].self, from: data)
-            } catch {
-                print("Error Decoding itemArray \(error)")
-            }
         }
+    
+    func loadItems (with request: NSFetchRequest<Item> = Item.fetchRequest()) {
+//        let request: NSFetchRequest<Item> = Item.fetchRequest() 👆
         
+        do {
+            itemArray = try context.fetch(request)
+        } catch {
+            print("Error in fetching data \(error)")
+        }
+        tableView.reloadData()
+    }
+}
+    
+    //MARK: - Search Bar Methods.
+
+extension TodoListViewController : UISearchBarDelegate {
+
+    func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
+        let request : NSFetchRequest<Item> = Item.fetchRequest()
+
+        request.predicate = NSPredicate(format: "title CONTAINS[cd] %@", searchBar.text!)
+
+
+        request.sortDescriptors = [NSSortDescriptor(key: "title", ascending: true)]
+        
+        loadItems(with: request)
+        
+        tableView.reloadData()
+
     }
     
-    
+    func searchBar(_ searchBar: UISearchBar, textDidChange searchText: String) {
+        if searchBar.text?.count == 0 {
+            loadItems()
+            
+            DispatchQueue.main.async {
+                searchBar.resignFirstResponder()
+            }
+            
+        }
+    }
+
 }
+
+    
+
 
