@@ -8,12 +8,14 @@
 
 import UIKit
 import RealmSwift
+import ChameleonFramework
 
 class TodoListViewController: SwipeTableViewController{
     
     var todoItems : Results<Item>?
     let realm = try! Realm ()
     
+    @IBOutlet weak var searchBar: UISearchBar!
     var selectedCatagory : Category? {
         didSet{
             loadItems()
@@ -22,10 +24,40 @@ class TodoListViewController: SwipeTableViewController{
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        tableView.separatorStyle = .none
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
         
-        print(FileManager.default.urls(for: .documentDirectory, in: .userDomainMask))
+        title = selectedCatagory?.name
+        
+        guard let hexColour = selectedCatagory?.colour else { fatalError() }
+        
+        updateNavBar(withHexCode: hexColour)
+
+        }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        
+        updateNavBar(withHexCode: "1D9BF6")
         
     }
+    
+    //MARK:- NavBar SetupMethods
+    
+    func updateNavBar(withHexCode colourHexCode: String) {
+        guard let navBar = navigationController?.navigationBar else {fatalError("Navigation Controller doesn't exist.")}
+        
+        guard let navBarColour = UIColor(hexString: colourHexCode) else { fatalError() }
+        
+        navBar.barTintColor = navBarColour
+        navBar.tintColor = ContrastColorOf(navBarColour, returnFlat: true)
+        searchBar.barTintColor = navBarColour
+        navBar.largeTitleTextAttributes = [NSAttributedStringKey.foregroundColor: ContrastColorOf(navBarColour, returnFlat: true)]
+        
+    }
+    
+
     
     //MARK - TableView DataSource Method.
 
@@ -40,7 +72,12 @@ class TodoListViewController: SwipeTableViewController{
         
         if let item = todoItems?[indexPath.row] {
             
-           cell.textLabel?.text = item.title
+            cell.textLabel?.text = item.title
+            
+            if let cellColour = UIColor(hexString: selectedCatagory!.colour)?.darken(byPercentage: CGFloat(indexPath.row) / CGFloat(todoItems!.count)) {
+                cell.backgroundColor = cellColour
+                cell.textLabel?.textColor = ContrastColorOf(cellColour, returnFlat: true)
+            }
             
         //Ternary operator ==>
         //value = condition ? valueIfTrue : valueIfFalse
